@@ -1,13 +1,19 @@
+import com.sun.xml.internal.ws.client.ClientTransportException;
 import org.apache.bookkeeper.client.AsyncCallback;
 import org.apache.bookkeeper.client.BKException;
 import org.apache.bookkeeper.client.BookKeeper;
 import org.apache.bookkeeper.client.LedgerHandle;
+import org.apache.bookkeeper.client.api.DigestType;
+import org.apache.bookkeeper.client.api.WriteHandle;
 import org.apache.bookkeeper.conf.ClientConfiguration;
 
 import org.apache.zookeeper.ZooKeeper;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.concurrent.ExecutionException;
+
+import static org.apache.bookkeeper.client.api.WriteFlag.DEFERRED_SYNC;
 
 public class BookKeeperClient {
 
@@ -96,6 +102,22 @@ public class BookKeeperClient {
     public static void deleteLedger(BookKeeper bookKeeper, long ledgerId, AsyncCallback.DeleteCallback callback) {
         bookKeeper.asyncDeleteLedger(ledgerId, callback, null);
         System.out.println("Delete  ledger :" + ledgerId);
+    }
+
+    public static org.apache.bookkeeper.client.api.BookKeeper createBkClientWithNewApi(ClientConfiguration configuration) throws Exception {
+        return org.apache.bookkeeper.client.api.BookKeeper.newBuilder(configuration).build();
+    }
+
+    public static WriteHandle createWiteHandler(org.apache.bookkeeper.client.api.BookKeeper bookKeeper) throws Exception {
+        return bookKeeper.newCreateLedgerOp()
+                .withDigestType(DigestType.CRC32)
+                .withPassword(LEDGER_PASSWD)
+                .withEnsembleSize(3)
+                .withWriteQuorumSize(3)
+                .withAckQuorumSize(2)
+                .withWriteFlags(DEFERRED_SYNC)
+                .execute()
+                .get();
     }
 
 

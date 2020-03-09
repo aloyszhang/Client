@@ -1,4 +1,5 @@
 import org.apache.bookkeeper.client.BookKeeper;
+import org.apache.bookkeeper.client.LedgerEntry;
 import org.apache.bookkeeper.client.LedgerHandle;
 import org.apache.bookkeeper.conf.ClientConfiguration;
 import org.apache.bookkeeper.meta.LedgerManager;
@@ -10,11 +11,13 @@ import org.junit.Test;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 
 public class BookKeeperClientTest {
-    private static final String META_SERVICE_SCHEMA = "zk+null";
     private static final String LEDGER_ROOT_PATH = "/ledgers";
+    private static final String META_SERVICE_SCHEMA = "zk+null";
+    private static final int ENTRY_COUNT = 10;
 
     private String zkAddress ;
     private ClientConfiguration configuration;
@@ -99,4 +102,21 @@ public class BookKeeperClientTest {
         System.out.println("All ledgers is :" + ledgerIds);
         return ledgerIds;
     }
+
+    @Test
+    public void testAddEntryAndRead() throws Exception{
+        LedgerHandle ledgerHandle = BookKeeperClient.createLedgerHandler(bookKeeper);
+        for (int i = 0; i < ENTRY_COUNT; i ++){
+            ledgerHandle.addEntry(("test message " + i).getBytes("utf-8"));
+            System.out.println("Send message " + i + " success.");
+        }
+        Enumeration<LedgerEntry> entryEnumeration = ledgerHandle.readEntries(0, ledgerHandle.getLastAddConfirmed());
+        while (entryEnumeration.hasMoreElements()) {
+            LedgerEntry entry = entryEnumeration.nextElement();
+            System.out.println("Read message  " + entry.getEntryId() + " success." );
+        }
+    }
+
+
+
 }
