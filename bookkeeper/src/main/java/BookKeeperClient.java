@@ -4,6 +4,7 @@ import org.apache.bookkeeper.client.BKException;
 import org.apache.bookkeeper.client.BookKeeper;
 import org.apache.bookkeeper.client.LedgerHandle;
 import org.apache.bookkeeper.client.api.DigestType;
+import org.apache.bookkeeper.client.api.ReadHandle;
 import org.apache.bookkeeper.client.api.WriteHandle;
 import org.apache.bookkeeper.conf.ClientConfiguration;
 
@@ -11,7 +12,6 @@ import org.apache.zookeeper.ZooKeeper;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.concurrent.ExecutionException;
 
 import static org.apache.bookkeeper.client.api.WriteFlag.DEFERRED_SYNC;
 
@@ -108,18 +108,29 @@ public class BookKeeperClient {
         return org.apache.bookkeeper.client.api.BookKeeper.newBuilder(configuration).build();
     }
 
-    public static WriteHandle createWiteHandler(org.apache.bookkeeper.client.api.BookKeeper bookKeeper) throws Exception {
+    public static WriteHandle createWriteHandler(org.apache.bookkeeper.client.api.BookKeeper bookKeeper) throws Exception {
         return bookKeeper.newCreateLedgerOp()
                 .withDigestType(DigestType.CRC32)
                 .withPassword(LEDGER_PASSWD)
                 .withEnsembleSize(3)
                 .withWriteQuorumSize(3)
                 .withAckQuorumSize(2)
+                // with this flag client just put entry to OS cache
                 .withWriteFlags(DEFERRED_SYNC)
                 .execute()
                 .get();
     }
 
+    public static ReadHandle createReadHandler(org.apache.bookkeeper.client.api.BookKeeper bookKeeper,
+                                               long ledgerId, boolean recovery) throws Exception {
+        return bookKeeper.newOpenLedgerOp()
+                .withLedgerId(ledgerId)
+                .withPassword(LEDGER_PASSWD)
+                // with Recovery mode, it will fence and seal the ledger and no more entries are allowed append to it.
+                .withRecovery(true)
+                .execute()
+                .get();
+    }
 
 
 }

@@ -1,3 +1,4 @@
+import org.apache.bookkeeper.client.BKException;
 import org.apache.bookkeeper.client.BookKeeper;
 import org.apache.bookkeeper.client.LedgerEntry;
 import org.apache.bookkeeper.client.LedgerHandle;
@@ -11,6 +12,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 
@@ -20,7 +22,7 @@ public class BookKeeperClientTest {
     private static final int ENTRY_COUNT = 10;
 
     private String zkAddress ;
-    private ClientConfiguration configuration;
+    ClientConfiguration configuration;
     private ZooKeeper zooKeeper;
     private LedgerCreateCallback ledgerCreateCallback;
     private LedgerDeleteCallback ledgerDeleteCallback;
@@ -90,7 +92,7 @@ public class BookKeeperClientTest {
         }
     }
 
-    private List<Long> listLedgers() throws IOException {
+    List<Long> listLedgers() throws IOException {
         List<Long> ledgerIds = new ArrayList<Long>();
         LedgerManager.LedgerRangeIterator iterator = bookKeeper.getLedgerManager().getLedgerRanges(5000);
         while(iterator.hasNext()) {
@@ -117,6 +119,28 @@ public class BookKeeperClientTest {
         }
     }
 
+    @Test
+    public void testWriteExistedLedger() throws Exception {
+        List<Long> ledgerIdList = listLedgers();
 
+        List<Long> successAddList = new ArrayList<>();
+        for (long ledgerId : ledgerIdList){
+            System.out.println("#### Ledger id : " + ledgerId);
+            LedgerHandle handle = bookKeeper.openLedger(ledgerId, BookKeeper.DigestType.CRC32, BookKeeperClient.LEDGER_PASSWD);
+            System.out.println("01 LAC : " + handle.getLastAddConfirmed());
+            if (handle.getLedgerMetadata().isClosed()) {
+                System.out.println("Ledger has been closed. LedgerId : " + handle.getId());
+                continue;
+            }
+            try{
+                handle.append("New message".getBytes());
+                System.out.println("Success add message for ledger : " + ledgerId);
+                successAddList.addAll(ledgerIdList);
+            } catch (BKException.BKLedgerClosedException e) {
+                System.out.println("Ledger : " + ledgerId + " has been closed.");
+            }
 
+        }
+        System.out.println("Success ledger list : " + successAddList);
+    }
 }
