@@ -1,3 +1,4 @@
+import org.apache.bookkeeper.client.AsyncCallback;
 import org.apache.bookkeeper.client.BKException;
 import org.apache.bookkeeper.client.BookKeeper;
 import org.apache.bookkeeper.client.LedgerEntry;
@@ -12,9 +13,9 @@ import org.junit.Test;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Random;
 
 public class BookKeeperClientTest {
     private static final String LEDGER_ROOT_PATH = "/ledgers";
@@ -108,15 +109,34 @@ public class BookKeeperClientTest {
     @Test
     public void testAddEntryAndRead() throws Exception{
         LedgerHandle ledgerHandle = BookKeeperClient.createLedgerHandler(bookKeeper);
-        for (int i = 0; i < ENTRY_COUNT; i ++){
-            ledgerHandle.addEntry(("test message " + i).getBytes("utf-8"));
-            System.out.println("Send message " + i + " success.");
-        }
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < ENTRY_COUNT; i ++){
+                    try {
+                        ledgerHandle.addEntry(("test message " + i).getBytes("utf-8"));
+                        Thread.sleep(1000);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    System.out.println("Send message " + i + " success.");
+                }
+            }
+        });
+        t.start();
+        Thread.sleep(3000);
         Enumeration<LedgerEntry> entryEnumeration = ledgerHandle.readEntries(0, ledgerHandle.getLastAddConfirmed());
         while (entryEnumeration.hasMoreElements()) {
             LedgerEntry entry = entryEnumeration.nextElement();
             System.out.println("Read message  " + entry.getEntryId() + " success." );
         }
+        Thread.sleep(3000);
+        Enumeration<LedgerEntry> entryEnumeration01 = ledgerHandle.readEntries(0, ledgerHandle.getLastAddConfirmed());
+        while (entryEnumeration01.hasMoreElements()) {
+            LedgerEntry entry = entryEnumeration01.nextElement();
+            System.out.println("Read message  " + entry.getEntryId() + " success." );
+        }
+        t.join();
     }
 
     @Test
@@ -142,5 +162,92 @@ public class BookKeeperClientTest {
 
         }
         System.out.println("Success ledger list : " + successAddList);
+    }
+    @Test
+    public void testPolling() throws Exception{
+        LedgerHandle ledgerHandle = BookKeeperClient.createLedgerHandler(bookKeeper);
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < ENTRY_COUNT * 10; i ++){
+                    try {
+                        ledgerHandle.addEntry(("test message " + i).getBytes("utf-8"));
+                        Thread.sleep(1000);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    System.out.println("Send message " + i + " success.");
+                }
+            }
+        });
+        t.start();
+
+
+        long startIndex = 0;
+        long endIndex  = 0;
+        int batch = 4;
+        while (!ledgerHandle.isClosed() ||  endIndex <= ledgerHandle.getLastAddConfirmed()){
+            long lac = ledgerHandle.getLastAddConfirmed();
+            endIndex = Math.min(lac, startIndex + batch - 1);
+            if (startIndex > lac ) {
+                System.out.println("01 StartIndex : " + startIndex +  " ,EndIndex : " + endIndex + " , lac : " + lac);
+                Thread.sleep(1000);
+                continue;
+            }
+            System.out.println("02 StartIndex : " + startIndex +  " ,EndIndex : " + endIndex + " , lac : " + lac);
+            Enumeration<LedgerEntry> entryEnumeration = ledgerHandle.readEntries(startIndex, endIndex);
+            while (entryEnumeration.hasMoreElements()) {
+                LedgerEntry entry = entryEnumeration.nextElement();
+                System.out.println("Read message  " + entry.getEntryId() + " success." );
+            }
+            startIndex = endIndex + 1;
+        }
+
+
+        t.join();
+    }
+
+
+    @Test
+    public void testAddEntry() throws Exception{
+        LedgerHandle ledgerHandle = BookKeeperClient.createLedgerHandler(bookKeeper);
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                long i = 0 ;
+                while(true){
+                    try {
+                        ledgerHandle.asyncAddEntry((getTestMessageStr(10000)).getBytes("utf-8"), new AsyncCallback.AddCallback() {
+                            @Override
+                            public void addComplete(int rc, LedgerHandle lh, long entryId, Object ctx) {
+                                System.out.println("Add " + entryId + " success");
+                            }
+                        }, null);
+                        if (i++ > 1000) {
+                            break;
+                        }
+                       // Thread.sleep(20);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+        t.start();
+        t.join();
+    }
+
+    private String getTestMessageStr(int length) {
+        String all = "abcdefghijklmnopqrstuvwxyz";
+        Random random = new Random(26);
+        StringBuilder sb = new StringBuilder();
+        for(int i = 0; i < length; i ++) {
+            sb.append(all.charAt(Math.abs(random.nextInt()) % 26));
+        }
+        return sb.toString();
+    }
+    @Test
+    public void testBuildMessage () {
+        System.out.println(getTestMessageStr(100));
     }
 }

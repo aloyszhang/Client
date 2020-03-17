@@ -6,6 +6,7 @@ import org.apache.bookkeeper.client.api.ReadHandle;
 import org.apache.bookkeeper.client.api.WriteHandle;
 import org.apache.bookkeeper.common.concurrent.FutureEventListener;
 import org.apache.bookkeeper.common.concurrent.FutureUtils;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.UnsupportedEncodingException;
@@ -22,7 +23,18 @@ public class NewApiBookKeeperClientTest extends BookKeeperClientTest{
     private static final int ENTRY_COUNT = 10;
     private static final String BASE_MESSAGE = "test message ";
 
+    BookKeeper bookKeeper;
 
+    @Before
+    public void init () {
+        super.init();
+        try {
+            bookKeeper = BookKeeperClient.createBkClientWithNewApi(configuration);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
 
     @Test
     public void testBuildNewApiBookKeeper() throws Exception {
@@ -31,13 +43,11 @@ public class NewApiBookKeeperClientTest extends BookKeeperClientTest{
 
     @Test
     public void testCreateNewApiLedger() throws Exception {
-        BookKeeper bookKeeper = BookKeeperClient.createBkClientWithNewApi(configuration);
         BookKeeperClient.createWriteHandler(bookKeeper);
     }
 
     @Test
     public void testNewApiWriteEntry() throws Exception {
-        BookKeeper bookKeeper = BookKeeperClient.createBkClientWithNewApi(configuration);
         WriteHandle writeHandle = BookKeeperClient.createWriteHandler(bookKeeper);
         long putRes = -1;
         for ( int i = 0 ; i < ENTRY_COUNT; i ++) {
@@ -89,7 +99,6 @@ public class NewApiBookKeeperClientTest extends BookKeeperClientTest{
 
     @Test
     public void testNewApiReadEntry() throws Exception {
-        BookKeeper bookKeeper = BookKeeperClient.createBkClientWithNewApi(configuration);
         WriteHandle writeHandle = BookKeeperClient.createWriteHandler(bookKeeper);
         // add entry
         for (int i = 0; i < ENTRY_COUNT; i ++) {
@@ -149,15 +158,8 @@ public class NewApiBookKeeperClientTest extends BookKeeperClientTest{
 
     @Test
     public void testNewApiFence() throws Exception {
-        ExecutorService executorService = Executors.newFixedThreadPool(2, new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                return new Thread(r);
-            }
-        });
-        BookKeeper bookKeeper = BookKeeperClient.createBkClientWithNewApi(configuration);
         WriteHandle writeHandle = BookKeeperClient.createWriteHandler(bookKeeper);
-        executorService.execute(() -> {
+        new Thread(() -> {
             try {
                 for (int i = 0 ; i < 10; i ++) {
                     long entryId = writeHandle.append(BASE_MESSAGE.getBytes("utf-8"));
@@ -167,7 +169,7 @@ public class NewApiBookKeeperClientTest extends BookKeeperClientTest{
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        });
+        }).start();
         Thread.sleep(3000);
         ReadHandle readHandle = BookKeeperClient.createReadHandler(bookKeeper, writeHandle.getId(), true);
         try {
@@ -184,6 +186,75 @@ public class NewApiBookKeeperClientTest extends BookKeeperClientTest{
             System.out.print(e.getMessage());
         }
     }
+
+    @Test
+    public void testReadExistedLedger() throws Exception {
+        List<Long> ledgerIdList = listLedgers();
+        for (long ledgerId : ledgerIdList) {
+            System.out.println("### Trying to read ledger : " + ledgerId);
+            ReadHandle readHandle = BookKeeperClient.createReadHandler(bookKeeper, ledgerId, true);
+            long lac = readHandle.getLastAddConfirmed();
+            if (lac == -1) {
+                continue;
+            }
+            LedgerEntries ledgerEntries = readHandle.read(0, readHandle.getLastAddConfirmed());
+            for (LedgerEntry ledgerEntry : ledgerEntries) {
+                System.out.println("Reader get entry : " + ledgerEntry.getEntryId()
+                        + " with content : " + new String(ledgerEntry.getEntryBytes()));
+                Thread.sleep(10);
+            }
+        }
+    }
+
+    public long startSendEntry () throws Exception {
+        BookKeeper bookKeeper = BookKeeperClient.createBkClientWithNewApi(configuration);
+        WriteHandle writeHandle = BookKeeperClient.createWriteHandler(bookKeeper);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                long i = 0;
+                while(true) {
+                    try {
+                        writeHandle.appendAsync((BASE_MESSAGE + i).getBytes("utf-8"));
+                        Thread.sleep(1000);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    System.out.println("Append entry :" + i++);
+                }
+            }
+        }).start();
+        return writeHandle.getId();
+    }
+
+    @Test
+    public void testPolling() throws Exception {
+        long ledgerId = startSendEntry();
+        ReadHandle readHandle = BookKeeperClient.createReadHandler(bookKeeper, ledgerId, false);
+        long nextEntryId = 0L;
+        int numEntriesPerBatch = 4;
+        while (!readHandle.isClosed() || nextEntryId <= readHandle.getLastAddConfirmed()) {
+            long lac = readHandle.getLastAddConfirmed();
+            if (nextEntryId > lac) {
+                Thread.sleep(1000);
+
+                lac = readHandle.readLastAddConfirmed();
+                System.out.println("lac : " + lac);
+                continue;
+            }
+
+            long endEntryId = Math.min(lac, nextEntryId + numEntriesPerBatch - 1);
+            LedgerEntries entries = readHandle.read(nextEntryId, endEntryId);
+            for (LedgerEntry ledgerEntry : entries) {
+                System.out.println("Reader get entry : " + ledgerEntry.getEntryId()
+                        + " with content : " + new String(ledgerEntry.getEntryBytes()));
+                Thread.sleep(10);
+            }
+
+            nextEntryId = endEntryId + 1;
+        }
+    }
+
 
 
 

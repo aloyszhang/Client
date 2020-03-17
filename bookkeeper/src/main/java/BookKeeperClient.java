@@ -26,7 +26,7 @@ public class BookKeeperClient {
             e.printStackTrace();
         }
     }
-
+    // ledger api start
     public static BookKeeper createBKClient(String zkAddress) {
         try {
             return new BookKeeper(zkAddress);
@@ -103,7 +103,9 @@ public class BookKeeperClient {
         bookKeeper.asyncDeleteLedger(ledgerId, callback, null);
         System.out.println("Delete  ledger :" + ledgerId);
     }
+    // ledger api end
 
+     // new api start
     public static org.apache.bookkeeper.client.api.BookKeeper createBkClientWithNewApi(ClientConfiguration configuration) throws Exception {
         return org.apache.bookkeeper.client.api.BookKeeper.newBuilder(configuration).build();
     }
@@ -123,14 +125,25 @@ public class BookKeeperClient {
 
     public static ReadHandle createReadHandler(org.apache.bookkeeper.client.api.BookKeeper bookKeeper,
                                                long ledgerId, boolean recovery) throws Exception {
-        return bookKeeper.newOpenLedgerOp()
-                .withLedgerId(ledgerId)
-                .withPassword(LEDGER_PASSWD)
-                // with Recovery mode, it will fence and seal the ledger and no more entries are allowed append to it.
-                .withRecovery(true)
-                .execute()
-                .get();
+        if (recovery) {
+            return bookKeeper.newOpenLedgerOp()
+                    .withLedgerId(ledgerId)
+                    .withPassword(LEDGER_PASSWD)
+                    // with Recovery mode, it will fence and seal the ledger and no more entries are allowed append to it.
+                    .withRecovery(true)
+                    .execute()
+                    .get();
+        } else {
+            return bookKeeper.newOpenLedgerOp()
+                    .withLedgerId(ledgerId)
+                    .withPassword(LEDGER_PASSWD)
+                    .execute()
+                    .get();
+        }
+
     }
+    // new api end
+
 
 
 }
