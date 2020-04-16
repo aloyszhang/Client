@@ -1,4 +1,3 @@
-import com.sun.xml.internal.ws.client.ClientTransportException;
 import org.apache.bookkeeper.client.AsyncCallback;
 import org.apache.bookkeeper.client.BKException;
 import org.apache.bookkeeper.client.BookKeeper;

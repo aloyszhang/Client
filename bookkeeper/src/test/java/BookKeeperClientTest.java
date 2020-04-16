@@ -36,7 +36,7 @@ public class BookKeeperClientTest {
     public void init () {
         zkAddress = "localhost:2181";
 
-        String metaServiceUri = META_SERVICE_SCHEMA + "://" + zkAddress + LEDGER_ROOT_PATH;
+        String metaServiceUri = META_SERVICE_SCHEMA + "://" + zkAddress;
         configuration = new ClientConfiguration();
         configuration.setMetadataServiceUri(metaServiceUri);
 

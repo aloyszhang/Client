@@ -9,14 +9,10 @@ import org.apache.bookkeeper.common.concurrent.FutureUtils;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 
 
 public class NewApiBookKeeperClientTest extends BookKeeperClientTest{
