@@ -22,13 +22,16 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- common dependencies -->
+            <!-- dependencies for BookKeeper start -->
             <dependency>
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
                 <version>${junit.version}</version>
             </dependency>
-            <!-- dependencies for BookKeeper-->
+            <!-- dependencies for BookKeeper end -->
+
+            <!-- dependencies for Pulsar start -->
+
             <dependency>
                 <groupId>org.apache.bookkeeper</groupId>
                 <artifactId>bookkeeper-server</artifactId>
@@ -36,10 +39,54 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.pulsar</groupId>
-                <artifactId>pulsar-zookeeper-utils</artifactId>
+                <artifactId>pulsar-client</artifactId>
                 <version>${pulsar.version}</version>
             </dependency>
-            <!-- dependencies for Pulsar -->
+            <!-- dependencies for Pulsar end -->
+
+            <!--junit dependencies start-->
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>4.12</version>
+            </dependency>
+            <!--junit dependencies end-->
+
+            <!--log dependencies start -->
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>1.6.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-log4j12</artifactId>
+                <version>1.6.1</version>
+            </dependency>
+            <dependency>
+                <groupId>log4j</groupId>
+                <artifactId>log4j</artifactId>
+                <version>1.2.15</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>javax.mail</groupId>
+                        <artifactId>mail</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>javax.jms</groupId>
+                        <artifactId>jms</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>com.sun.jdmk</groupId>
+                        <artifactId>jmxtools</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>com.sun.jmx</groupId>
+                        <artifactId>jmxri</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <!--log dependencies end -->
 
         </dependencies>
     </dependencyManagement>
