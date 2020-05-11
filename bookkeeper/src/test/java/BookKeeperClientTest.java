@@ -1,8 +1,4 @@
-import org.apache.bookkeeper.client.AsyncCallback;
-import org.apache.bookkeeper.client.BKException;
-import org.apache.bookkeeper.client.BookKeeper;
-import org.apache.bookkeeper.client.LedgerEntry;
-import org.apache.bookkeeper.client.LedgerHandle;
+import org.apache.bookkeeper.client.*;
 import org.apache.bookkeeper.conf.ClientConfiguration;
 import org.apache.bookkeeper.meta.LedgerManager;
 import org.apache.bookkeeper.zookeeper.ZooKeeperClient;
@@ -16,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Random;
+import java.util.regex.Pattern;
 
 public class BookKeeperClientTest {
     private static final String LEDGER_ROOT_PATH = "/ledgers";
@@ -32,9 +29,9 @@ public class BookKeeperClientTest {
 
 
 
-    @Before
+    //@Before
     public void init () {
-        zkAddress = "localhost:2181";
+        zkAddress = "localhost:2181/bookkeeper";
 
         String metaServiceUri = META_SERVICE_SCHEMA + "://" + zkAddress;
         configuration = new ClientConfiguration();
@@ -55,6 +52,32 @@ public class BookKeeperClientTest {
         System.out.println(URI.create(metaServiceUri).getScheme());
         System.out.println(URI.create(metaServiceUri).getPath());
         System.out.println(URI.create(metaServiceUri).getAuthority());
+    }
+
+    @Test
+    public void testRackAwarePlacementPolicy() throws Exception {
+        // 1. build zkc
+        zkAddress = "localhost:2181/bookkeeper";
+
+        String metaServiceUri = META_SERVICE_SCHEMA + "://" + zkAddress;
+        configuration = new ClientConfiguration();
+        configuration.setMetadataServiceUri(metaServiceUri);
+        configuration.setEnsemblePlacementPolicy(RackawareEnsemblePlacementPolicy.class);
+        ZooKeeper zooKeeper = null;
+
+        try {
+            zooKeeper =  ZooKeeperClient.newBuilder()
+                    .connectString(zkAddress)
+                    .build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return;
+        }
+        // 2. build bkc
+        BookKeeper bookKeeper = new BookKeeper(configuration, zooKeeper);
+
+        // 3. create ledger
+        BookKeeperClient.createLedgerHandler(bookKeeper, ledgerCreateCallback);
     }
 
     @Test
@@ -249,5 +272,44 @@ public class BookKeeperClientTest {
     @Test
     public void testBuildMessage () {
         System.out.println(getTestMessageStr(100));
+    }
+
+    // 判断一个IP是不是合法
+    public static boolean isIp(String  str){
+        if(str == null || "".equalsIgnoreCase(str)){
+            return false;
+        }
+        final Pattern pattern = Pattern.compile("(((25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]?\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]?\\d);)*(((25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]?\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]?\\d))$");//全量匹配
+        //模糊匹配，*  *.*  *.*.*    *.*.*.*   *.*.*.*.*
+        final Pattern allWildcards = Pattern.compile("^(\\*(\\.\\*)*)$");
+        //前缀匹配，xx.*   xx.xx.*  xx.xx.xx.*   x.*;y.*
+        final Pattern trailingWildcardsIp4 = Pattern.compile
+                (
+                        "(((((25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]?\\d)\\.){1,3})(\\*)(\\.\\*)*);)*((((25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]?\\d)\\.){1,3})(\\*)(\\.\\*)*)$"
+                ); // "blah.*;a.*", "blah.*.*", etc.
+        if(pattern.matcher(str).matches()){
+            return true;
+        }
+        if(allWildcards.matcher(str).matches()){
+            return true;
+        }
+        if(trailingWildcardsIp4.matcher(str).matches()){
+            return true;
+        }
+        return false;
+    }
+
+    @Test
+    public void ipCheck() {
+        String ipList = "10.128.19.*;10.128.13.*;192.168.*.*;192.*";
+        boolean isIp = true;
+        for(String ip : ipList.split(";")) {
+            if (!isIp(ip)) {
+                isIp = false;
+            }
+        }
+        System.out.println(isIp);
+        System.out.println(isIp(ipList));
+
     }
 }

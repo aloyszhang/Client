@@ -17,6 +17,7 @@
     <properties>
         <junit.version>4.12</junit.version>
         <bookkeeper.version>4.11.0-SNAPSHOT</bookkeeper.version>
+        <pulsar.version>2.5.1</pulsar.version>
     </properties>
 
     <dependencyManagement>
@@ -32,6 +33,11 @@
                 <groupId>org.apache.bookkeeper</groupId>
                 <artifactId>bookkeeper-server</artifactId>
                 <version>${bookkeeper.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.pulsar</groupId>
+                <artifactId>pulsar-zookeeper-utils</artifactId>
+                <version>${pulsar.version}</version>
             </dependency>
             <!-- dependencies for Pulsar -->
 
