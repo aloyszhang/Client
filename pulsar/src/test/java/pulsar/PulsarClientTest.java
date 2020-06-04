@@ -5,7 +5,7 @@ import org.junit.Test;
 
 public class PulsarClientTest {
 
-    public static final String topic = "test/test/auto-topic-4p";
+    public static final String topic = "test/test/simple";
     public static final String serviceUrl = "puslar://localhost:6650";
 
     protected static PulsarClient pulsarClient;

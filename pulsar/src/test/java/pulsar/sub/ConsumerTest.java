@@ -1,9 +1,7 @@
 package pulsar.sub;
 
-import org.apache.pulsar.client.api.Consumer;
-import org.apache.pulsar.client.api.Message;
-import org.apache.pulsar.client.api.PulsarClientException;
-import org.apache.pulsar.client.api.SubscriptionInitialPosition;
+import org.apache.pulsar.client.api.*;
+import org.apache.pulsar.client.impl.MessageIdImpl;
 import org.apache.pulsar.client.impl.TopicMessageIdImpl;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,6 +36,65 @@ public class ConsumerTest extends PulsarClientTest {
             consumer.acknowledge(message);
             System.out.println("Receive msg key : "+ key + " value: " + value );
         }
+    }
+    @Test
+    public void testConsumeAckCumulative() throws Exception {
+        String subName = "sub";
+        Consumer<byte[]> consumer  = pulsarClient.newConsumer()
+                .topic("test/test/simple")
+                .subscriptionInitialPosition(SubscriptionInitialPosition.Earliest)
+                .subscriptionName(subName)
+                .subscriptionType(SubscriptionType.Exclusive)
+                .subscribe();
+        consumer.seek(new MessageIdImpl(239, 0, 0));
+
+        for (int i = 0 ; i < 200; i++) {
+            Message<byte[]> message = consumer.receive();
+            System.out.println(((MessageIdImpl) message.getMessageId()) + " : " +  new String(message.getValue()));
+            if ( i == 90) {
+                consumer.acknowledgeCumulative(message);
+            }
+        }
+        consumer.close();
+    }
+
+    @Test
+    public void testAckIndividual() throws Exception {
+        String subName = "sub";
+        Consumer<byte[]> consumer  = pulsarClient.newConsumer()
+                .topic("test/test/simple")
+                .subscriptionInitialPosition(SubscriptionInitialPosition.Earliest)
+                .subscriptionName(subName)
+                .subscriptionType(SubscriptionType.Exclusive)
+                .subscribe();
+        consumer.seek(new MessageIdImpl(239, 0, 0));
+
+        for (int i = 0 ; i < 200; i++) {
+            Message<byte[]> message = consumer.receive();
+            System.out.println(((MessageIdImpl) message.getMessageId()) + " : " +  new String(message.getValue()));
+            if ( i % 10 != 0) {
+                consumer.acknowledge(message);
+            }
+        }
+        consumer.close();
+    }
+
+    @Test
+    public void testSimpleConsume() throws Exception {
+        String subName = "sub";
+        Consumer<byte[]> consumer  = pulsarClient.newConsumer()
+                .topic("test/test/simple")
+                .subscriptionInitialPosition(SubscriptionInitialPosition.Earliest)
+                .subscriptionName(subName)
+                .subscriptionType(SubscriptionType.Exclusive)
+                .subscribe();
+
+
+        for (int i = 0 ; i < 200; i++) {
+            Message<byte[]> message = consumer.receive();
+            System.out.println(((MessageIdImpl) message.getMessageId()) + " : " +  new String(message.getValue()));
+        }
+        consumer.close();
     }
 
     @Test

@@ -78,6 +78,30 @@ public class ProducerTest extends PulsarClientTest {
     }
 
     @Test
+    public void sendSimple() throws Exception {
+        PulsarClient client = PulsarClient.builder()
+                .serviceUrl("pulsar://127.0.0.1:6650")//"pulsar://10.215.128.78:16650"
+                .build();
+        String topic = "test/test/simple";
+        int msgCount = 100;
+
+        Producer producer = client.newProducer()
+                .topic(topic)
+                .producerName("Simple-producer")
+                .blockIfQueueFull(true)
+                .enableBatching(false)
+                .maxPendingMessages(1000)
+                .create();
+        for (int i = 0 ; i < msgCount; i++) {
+            byte [] msg = ("Message " + i).getBytes("utf-8");
+            MessageIdImpl messageId = (MessageIdImpl) producer.send(msg);
+            System.out.println(messageId);
+        }
+
+
+    }
+
+    @Test
     public void rateTest() throws Exception {
         final int msgLength = 1024;
         final boolean async = true;
