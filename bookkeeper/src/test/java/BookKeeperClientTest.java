@@ -29,7 +29,7 @@ public class BookKeeperClientTest {
 
 
 
-    //@Before
+    @Before
     public void init () {
         zkAddress = "localhost:2181/bookkeeper";
 
@@ -147,17 +147,21 @@ public class BookKeeperClientTest {
             }
         });
         t.start();
-        Thread.sleep(3000);
+        if ( ledgerHandle.getLastAddConfirmed() == -1) {
+            Thread.sleep(3000);
+            System.out.println("No entry found.");
+        }
         Enumeration<LedgerEntry> entryEnumeration = ledgerHandle.readEntries(0, ledgerHandle.getLastAddConfirmed());
         while (entryEnumeration.hasMoreElements()) {
             LedgerEntry entry = entryEnumeration.nextElement();
-            System.out.println("Read message  " + entry.getEntryId() + " success." );
+            System.out.println("Read1 message  " + entry.getEntryId() + " success." );
         }
+        System.out.println("=========");
         Thread.sleep(3000);
         Enumeration<LedgerEntry> entryEnumeration01 = ledgerHandle.readEntries(0, ledgerHandle.getLastAddConfirmed());
         while (entryEnumeration01.hasMoreElements()) {
             LedgerEntry entry = entryEnumeration01.nextElement();
-            System.out.println("Read message  " + entry.getEntryId() + " success." );
+            System.out.println("Read2 message  " + entry.getEntryId() + " success." );
         }
         t.join();
     }
