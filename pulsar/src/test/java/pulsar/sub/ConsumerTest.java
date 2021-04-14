@@ -81,19 +81,30 @@ public class ConsumerTest extends PulsarClientTest {
 
     @Test
     public void testSimpleConsume() throws Exception {
-        String subName = "sub";
+        String subName = "sub-pulsar";
         Consumer<byte[]> consumer  = pulsarClient.newConsumer()
-                .topic("test/test/simple")
+                .topic(topic)
                 .subscriptionInitialPosition(SubscriptionInitialPosition.Earliest)
                 .subscriptionName(subName)
                 .subscriptionType(SubscriptionType.Exclusive)
                 .subscribe();
 
+       // consumer.seek(1);
+        for (int i = 0 ; i < 200; i++) {
+            Message<byte[]> message = consumer.receive();
+            System.out.println(( message.getMessageId()) + " : " +  new String(message.getValue()) + " publish Time : " + message.getPublishTime() );
+            consumer.acknowledge(message);
+        }
 
+      //  consumer.seek(10);
+        System.out.println("=============== After seek ===============");
         for (int i = 0 ; i < 200; i++) {
             Message<byte[]> message = consumer.receive();
             System.out.println(((MessageIdImpl) message.getMessageId()) + " : " +  new String(message.getValue()));
+            consumer.acknowledge(message);
         }
+
+
         consumer.close();
     }
 
@@ -142,8 +153,8 @@ public class ConsumerTest extends PulsarClientTest {
                     consumer.acknowledge(msg);
                     int sum = successCounter.incrementAndGet();
                     TopicMessageIdImpl messageId = (TopicMessageIdImpl) msg.getMessageId();
-                    System.out.println("Recieved :" + messageId.getTopicPartitionName() + " " +
-                            messageId.getInnerMessageId());
+                 /*   System.out.println("Recieved :" + messageId.getTopicPartitionName() + " " +
+                            messageId.getInnerMessageId());*/
                     if (sum % 1000 == 0) {
                         System.out.println("consume : " + sum);
                     }

@@ -11,6 +11,7 @@ import pulsar.PulsarClientTest;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -21,9 +22,8 @@ public class ProducerTest extends PulsarClientTest {
     public static AtomicLong counter = new AtomicLong(0);
     private static Producer<byte [] > producer;
 
-    String iWill = "IWill";
-    String lu = "_love_u_for_everyday";
-   // @Before
+
+    @Before
     public void setup() throws Exception {
         super.buildPulsarClientTest();
         producer = pulsarClient.newProducer()
@@ -34,7 +34,7 @@ public class ProducerTest extends PulsarClientTest {
     @Test
     public void testSendKey() throws Exception {
 
-        int total = 300;
+        int total = 100;
         int keyNum = 3;
         AtomicLong counter = new AtomicLong(900);
         for ( int i = 0; i < total; i ++) {
@@ -97,8 +97,6 @@ public class ProducerTest extends PulsarClientTest {
             MessageIdImpl messageId = (MessageIdImpl) producer.send(msg);
             System.out.println(messageId);
         }
-
-
     }
 
     @Test
@@ -237,4 +235,79 @@ public class ProducerTest extends PulsarClientTest {
         }
     }
 
+    @Test
+    public void testSimpleSend() throws Exception {
+        //String topic = "test/test/test";
+        String topic = "test/test/1p";
+        int msgCount = 5000;
+
+        Producer producer = pulsarClient.newProducer()
+                .topic(topic)
+                .producerName("Simple-producer")
+                .maxPendingMessages(2000)
+                .batchingMaxMessages(1000)
+                .compressionType(CompressionType.LZ4)
+                .batchingMaxPublishDelay(1, TimeUnit.MILLISECONDS)
+                .create();
+
+        byte[] msgBody = "test-message".getBytes();
+
+
+        TypedMessageBuilder<byte[]> msgBuilder = (TypedMessageBuilder<byte[]>) producer.newMessage();
+        msgBuilder = msgBuilder.eventTime(System.currentTimeMillis());
+        msgBuilder = msgBuilder.key(String.valueOf(System.currentTimeMillis()));
+        for (int i = 0; i < msgCount; i++) {
+
+            msgBuilder.value(msgBody)
+                    .sendAsync()
+                    .thenApply((messageId -> {
+                        System.out.println("### MessageId : " + messageId);
+                        return null;
+                    }))
+                    .exceptionally(t -> {System.out.println("### send error" + t.getCause());
+                        return null;
+                    });
+        }
+        Thread.sleep(30 * 1000);
+
+
+    }
+
+    @Test
+    public void testNewSeek() throws Exception {
+        String topic = "test/test/1p";
+        String subName = "sub-seek";
+        Consumer consumer = pulsarClient.newConsumer()
+                .subscriptionName(subName)
+                .subscriptionType(SubscriptionType.Exclusive)
+                .consumerName("seek-consumer")
+                .receiverQueueSize(2)
+                .topic(topic)
+                .subscribe();
+        System.out.println(1);
+        //consumer.seek(Long.MAX_VALUE);
+      //  consumer.seek(10);
+        System.out.println("Seek end");
+        for(int i=0; i < 21;i ++){
+            try{
+                Message message = consumer.receive(20, TimeUnit.SECONDS);
+                String msg = new String(message.getData());
+                System.out.println(message.getMessageId() + "    " + msg + "    publish time" + message.getPublishTime());
+                consumer.acknowledge(message);
+            }catch (Exception e) {
+                System.out.println("Error " + e);
+                //break;
+            }
+        }
+    }
+
+    @Test
+    public void testPublish() {
+
+    }
+
+    @Test
+    public void testSubscriptionType() {
+
+    }
 }

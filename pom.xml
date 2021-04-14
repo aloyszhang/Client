@@ -11,13 +11,15 @@
     <modules>
         <module>pulsar</module>
         <module>bookkeeper</module>
+        <module>kakfa</module>
     </modules>
 
 
     <properties>
         <junit.version>4.12</junit.version>
         <bookkeeper.version>4.11.0-SNAPSHOT</bookkeeper.version>
-        <pulsar.version>2.5.1</pulsar.version>
+        <pulsar.version>2.8.0-SNAPSHOT</pulsar.version>
+        <kafka.versison>2.0.0</kafka.versison>
     </properties>
 
     <dependencyManagement>
@@ -87,6 +89,13 @@
                 </exclusions>
             </dependency>
             <!--log dependencies end -->
+
+
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>kafka-clients</artifactId>
+                <version>${kafka.versison}</version>
+            </dependency>
 
         </dependencies>
     </dependencyManagement>
